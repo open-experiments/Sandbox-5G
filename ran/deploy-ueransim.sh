@@ -55,8 +55,8 @@ data:
 EOF
 
 # Deploy the 5GRAN components
-oc apply -f 5gran-gnb-configmap.yaml
-oc apply -f 5gran-ue-configmap.yaml
-oc apply -f 5gran.yaml
+oc apply -f 5gran-gnb-configmap.yaml -n ${NAMESPACE}
+oc apply -f 5gran-ue-configmap.yaml -n ${NAMESPACE}
+oc apply -f 5gran.yaml -n ${NAMESPACE}
 
 echo "Enjoy The 5GRAN!"

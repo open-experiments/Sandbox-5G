@@ -205,3 +205,22 @@ objects:
               s_nssai:
                 sst: ${SST}
                 sd: ${SD}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+  spec:
+    path: /metrics
+    to:
+      kind: Service
+      name: ${NAME}
+    port:
+      targetPort: metrics
+    wildcardPolicy: None

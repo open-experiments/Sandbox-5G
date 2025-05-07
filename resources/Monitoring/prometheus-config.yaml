@@ -8,26 +8,79 @@ data:
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
-    
     scrape_configs:
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
-      
       - job_name: 'open5gs-amf'
         metrics_path: /metrics
         scheme: http
         static_configs:
-          - targets: ['amf-metrics-open5gcore.apps.acmhub.narlabs.io']
+          - targets: ['open5gs-amf-open5gcore.apps.acmhub.narlabs.io']
             labels:
               service: 'open5gs-amf'
               component: '5g-core'
-      
       - job_name: 'open5gs-smf'
         metrics_path: /metrics
         scheme: http
         static_configs:
-          - targets: ['smf-metrics-open5gcore.apps.acmhub.narlabs.io']
+          - targets: ['open5gs-smf-open5gcore.apps.acmhub.narlabs.io']
             labels:
               service: 'open5gs-smf'
+              component: '5g-core'
+      - job_name: 'open5gs-udm'
+        metrics_path: /metrics
+        scheme: http
+        static_configs:
+          - targets: ['open5gs-udm-open5gcore.apps.acmhub.narlabs.io']
+            labels:
+              service: 'open5gs-udm'
+              component: '5g-core'
+      - job_name: 'open5gs-udr'
+        metrics_path: /metrics
+        scheme: http
+        static_configs:
+          - targets: ['open5gs-udr-open5gcore.apps.acmhub.narlabs.io']
+            labels:
+              service: 'open5gs-udr'
+              component: '5g-core'
+      - job_name: 'open5gs-upf'
+        metrics_path: /metrics
+        scheme: http
+        static_configs:
+          - targets: ['open5gs-upf-open5gcore.apps.acmhub.narlabs.io']
+            labels:
+              service: 'open5gs-upf'
+              component: '5g-core'
+      - job_name: 'open5gs-pcf'
+        metrics_path: /metrics
+        scheme: http
+        static_configs:
+          - targets: ['open5gs-pcf-open5gcore.apps.acmhub.narlabs.io']
+            labels:
+              service: 'open5gs-pcf'
+              component: '5g-core'
+      - job_name: 'open5gs-nssf'
+        metrics_path: /metrics
+        scheme: http
+        static_configs:
+          - targets: ['open5gs-nssf-open5gcore.apps.acmhub.narlabs.io']
+            labels:
+              service: 'open5gs-nssf'
+              component: '5g-core'
+      - job_name: 'open5gs-ausf'
+        metrics_path: /metrics
+        scheme: http
+        static_configs:
+          - targets: ['open5gs-ausf-open5gcore.apps.acmhub.narlabs.io']
+            labels:
+              service: 'open5gs-ausf'
+              component: '5g-core'
+      - job_name: 'open5gs-nrf'
+        metrics_path: /metrics
+        scheme: http
+        static_configs:
+          - targets: ['open5gs-nrf-open5gcore.apps.acmhub.narlabs.io']
+            labels:
+              service: 'open5gs-nrf'
               component: '5g-core'
