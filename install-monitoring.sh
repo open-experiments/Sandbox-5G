@@ -406,111 +406,6 @@ spec:
     insecureEdgeTerminationPolicy: Redirect
 EOF
 
-echo -e "Deploying Jaeger for distributed tracing\n"
-cat <<EOF | oc apply -n ${MONITORING_NAMESPACE} -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: jaeger
-  labels:
-    app: jaeger
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: jaeger
-  template:
-    metadata:
-      labels:
-        app: jaeger
-    spec:
-      containers:
-      - name: jaeger
-        image: jaegertracing/all-in-one:latest
-        ports:
-        - containerPort: 16686
-          name: http
-        - containerPort: 5775
-          name: agent-udp
-          protocol: UDP
-        - containerPort: 6831
-          name: agent-thrift
-          protocol: UDP
-        - containerPort: 6832
-          name: agent-thrift-binary
-          protocol: UDP
-        - containerPort: 5778
-          name: agent-http
-        - containerPort: 14268
-          name: collector-http
-        - containerPort: 14250
-          name: collector-grpc
-        - containerPort: 9411
-          name: zipkin
-        env:
-        - name: COLLECTOR_ZIPKIN_HOST_PORT
-          value: ":9411"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 512Mi
-          limits:
-            cpu: 500m
-            memory: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: jaeger
-  labels:
-    app: jaeger
-spec:
-  selector:
-    app: jaeger
-  ports:
-  - name: http
-    port: 16686
-    targetPort: 16686
-  - name: agent-udp
-    port: 5775
-    protocol: UDP
-    targetPort: 5775
-  - name: agent-thrift
-    port: 6831
-    protocol: UDP
-    targetPort: 6831
-  - name: agent-thrift-binary
-    port: 6832
-    protocol: UDP
-    targetPort: 6832
-  - name: agent-http
-    port: 5778
-    targetPort: 5778
-  - name: collector-http
-    port: 14268
-    targetPort: 14268
-  - name: collector-grpc
-    port: 14250
-    targetPort: 14250
-  - name: zipkin
-    port: 9411
-    targetPort: 9411
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: jaeger
-spec:
-  to:
-    kind: Service
-    name: jaeger
-  port:
-    targetPort: http
-  tls:
-    termination: edge
-    insecureEdgeTerminationPolicy: Redirect
-EOF
-
 echo -e "Deploying FluentBit for log collection\n"
 cat <<EOF | oc apply -n ${MONITORING_NAMESPACE} -f -
 apiVersion: v1
@@ -805,12 +700,10 @@ EOF
 # Get the routes for accessing the monitoring dashboards
 PROMETHEUS_ROUTE=$(oc get route prometheus -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "prometheus-route-not-found")
 GRAFANA_ROUTE=$(oc get route grafana -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "grafana-route-not-found")
-JAEGER_ROUTE=$(oc get route jaeger -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "jaeger-route-not-found")
 KIBANA_ROUTE=$(oc get route kibana -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "kibana-route-not-found")
 
 echo -e "\nMonitoring deployment completed successfully!"
 echo -e "Access the monitoring dashboards at:"
 echo -e "  Prometheus: https://${PROMETHEUS_ROUTE}"
 echo -e "  Grafana: https://${GRAFANA_ROUTE} (Default credentials: admin/admin)"
-echo -e "  Jaeger: https://${JAEGER_ROUTE}"
 echo -e "  Kibana: https://${KIBANA_ROUTE}"
