@@ -12,6 +12,7 @@ echo $AMF_IP
 NAMESPACE="open5gran"
 echo "Installing open5gran..."
 oc new-project ${NAMESPACE}
+oc project ${NAMESPACE}
 echo "Adding open5gran namespace as a part of the mesh"
 oc label namespace ${NAMESPACE} istio-injection=enabled
 echo "Enabling pod monitor in open5gran namespace"
