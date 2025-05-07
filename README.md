@@ -2,7 +2,9 @@
 
 This repository provides a complete 5g sandbox with Open5GS-based 5G Core Network + containerized UERANSIM, all on a Openshift Cluster with pods. It deploys CNFs with monitoring, logging, and tracing capabilities.
 
-![Architecture](https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/arch.png)
+<div align="left">
+    <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/arch.png" width="321"/>
+</div>
 
 ## Features
 
@@ -46,7 +48,6 @@ This repository provides a complete 5g sandbox with Open5GS-based 5G Core Networ
 |-----------|-------------|
 | **Prometheus** | Metrics collection and storage |
 | **Grafana** | Metrics visualization with custom 5G dashboards |
-| **Jaeger** | Distributed tracing for 5G service interactions |
 | **Elasticsearch** | Log storage and indexing |
 | **Kibana** | Log visualization and analysis |
 | **Fluent Bit** | Log collection and forwarding |
@@ -116,7 +117,9 @@ This creates:
 - Jaeger for distributed tracing
 - ELK stack (Elasticsearch, Fluent Bit, Kibana) for log management
 
-![Grafana with 5G Metrics](https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/grafana.png)
+<div align="left">
+    <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/grafana.png" width="800"/>
+</div>
 
 ### 4. Deploy UERANSIM
 
@@ -141,7 +144,6 @@ After deployment, you can access the following interfaces:
 | **5G Core WebUI** | `https://$(oc get route open5gs-webui -n open5gcore -o jsonpath='{.spec.host}')` | admin / 1423 |
 | **Grafana** | `https://$(oc get route grafana -n open5gs-monitoring -o jsonpath='{.spec.host}')` | admin / admin |
 | **Prometheus** | `https://$(oc get route prometheus -n open5gs-monitoring -o jsonpath='{.spec.host}')` | N/A |
-| **Jaeger** | `https://$(oc get route jaeger -n open5gs-monitoring -o jsonpath='{.spec.host}')` | N/A |
 | **Kibana** | `https://$(oc get route kibana -n open5gs-monitoring -o jsonpath='{.spec.host}')` | N/A |
 | **Kiali** | `https://$(oc get route kiali -n istio-system -o jsonpath='{.spec.host}')` | N/A |
 
