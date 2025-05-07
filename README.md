@@ -107,7 +107,7 @@ This will:
 Set up the monitoring infrastructure:
 
 ```bash
-./deploy-monitoring.sh
+./install-monitoring.sh
 ```
 
 This creates:
@@ -229,6 +229,14 @@ For more detailed analysis, use Kibana to query logs across all components.
 ```bash
 ./ran/delete-ueransim.sh
 ```
+### Remove 5G Monitoring
+
+```bash
+./delete-monitoring.sh
+```
+
+This will:
+- Delete all monitoring components
 
 ### Remove 5G Core
 
