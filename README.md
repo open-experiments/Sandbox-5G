@@ -180,6 +180,8 @@ Verify that the gNB can connect to the AMF:
 oc logs deployment/5gran -c gnb -n open5gcore
 ```
 
+![AMF Logs](https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/amf.png)
+
 ### Testing Data Connectivity
 
 Check if the UE has successfully connected and received an IP address:
@@ -187,6 +189,8 @@ Check if the UE has successfully connected and received an IP address:
 ```bash
 oc logs deployment/5gran -c ue -n open5gcore
 ```
+![gNB Logs](https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/gnb.png)
+![UE Logs](https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/ue.png)
 
 Verify data connectivity through the UE binder:
 
