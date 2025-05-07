@@ -1,0 +1,158 @@
+---
+# OpenShift Template for Open5GS Database Population (Subscriber Management)
+# Author: Fatih E.NAR
+# Date: 4/11/2075 
+#
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: open5gs-populate
+  annotations:
+    description: "Database Population Tool for Open5GS"
+    tags: "5g,open5gs,database,subscribers"
+    openshift.io/display-name: "Open5GS Subscriber Management"
+    openshift.io/documentation-url: "https://open5gs.org"
+    openshift.io/support-url: "https://github.com/open5gs/open5gs/issues"
+    iconClass: "icon-5g"
+parameters:
+- name: NAME
+  description: The name assigned to all of the objects defined in this template.
+  displayName: Name
+  required: true
+  value: "open5gs-populate"
+- name: NAMESPACE
+  description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  required: true
+  value: "open5gcore"
+- name: IMAGE_REGISTRY
+  description: The registry for the dbctl image
+  displayName: Image Registry
+  required: true
+  value: "docker.io"
+- name: IMAGE_REPOSITORY
+  description: The repository for the dbctl image
+  displayName: Image Repository
+  required: true
+  value: "gradiant/open5gs-dbctl"
+- name: IMAGE_TAG
+  description: The image tag to be used
+  displayName: Image Tag
+  required: true
+  value: "latest"
+- name: MONGODB_URI
+  description: MongoDB URI
+  displayName: MongoDB URI
+  required: true
+  value: "mongodb://mongo/open5gs"
+- name: IMSI
+  description: IMSI for test subscriber
+  displayName: IMSI
+  required: true
+  value: "999700000000001"
+- name: KI
+  description: Subscriber authentication key
+  displayName: Ki
+  required: true
+  value: "465B5CE8B199B49FAA5F0A2EE238A6BC"
+- name: OPC
+  description: Operator code
+  displayName: OPC
+  required: true
+  value: "E8ED289DEBA952E4283B54E88E6183CA"
+- name: APN
+  description: Access Point Name
+  displayName: APN
+  required: true
+  value: "internet"
+- name: SST
+  description: Slice/Service Type
+  displayName: SST
+  required: true
+  value: "1"
+- name: SD
+  description: Slice Differentiator
+  displayName: SD
+  required: true
+  value: "000001"
+objects:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${NAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          app.kubernetes.io/name: ${NAME}
+          app.kubernetes.io/part-of: open5gcore
+      spec:
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        containers:
+        - name: populate
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          command: 
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Setting up admin user in MongoDB..."
+              # Create a temporary JavaScript file to add admin user if none exists
+              cat << 'EOF' > /tmp/account.js
+              db = db.getSiblingDB('open5gs')
+              cursor = db.accounts.find()
+              if (cursor.count() == 0) {
+                  db.accounts.insertOne({ 
+                      salt: 'f5c15fa72622d62b6b790aa8569b9339729801ab8bda5d13997b5db6bfc1d997', 
+                      hash: '402223057db5194899d2e082aeb0802f6794622e1cbc47529c419e5a603f2cc592074b4f3323b239ffa594c8b756d5c70a4e1f6ecd3f9f0d2d7328c4cf8b1b766514effff0350a90b89e21eac54cd4497a169c0c7554a0e2cd9b672e5414c323f76b8559bc768cba11cad2ea3ae704fb36abc8abc2619231ff84ded60063c6e1554a9777a4a464ef9cfdfa90ecfdacc9844e0e3b2f91b59d9ff024aec4ea1f51b703a31cda9afb1cc2c719a09cee4f9852ba3cf9f07159b1ccf8133924f74df770b1a391c19e8d67ffdcbbef4084a3277e93f55ac60d80338172b2a7b3f29cfe8a36738681794f7ccbe9bc98f8cdeded02f8a4cd0d4b54e1d6ba3d11792ee0ae8801213691848e9c5338e39485816bb0f734b775ac89f454ef90992003511aa8cceed58a3ac2c3814f14afaaed39cbaf4e2719d7213f81665564eec02f60ede838212555873ef742f6666cc66883dcb8281715d5c762fb236d72b770257e7e8d86c122bb69028a34cf1ed93bb973b440fa89a23604cd3fefe85fbd7f55c9b71acf6ad167228c79513f5cfe899a2e2cc498feb6d2d2f07354a17ba74cecfbda3e87d57b147e17dcc7f4c52b802a8e77f28d255a6712dcdc1519e6ac9ec593270bfcf4c395e2531a271a841b1adefb8516a07136b0de47c7fd534601b16f0f7a98f1dbd31795feb97da59e1d23c08461cf37d6f2877d0f2e437f07e25015960f63', 
+                      username: 'admin', 
+                      roles: ['admin'], 
+                      "__v": 0
+                  })
+                  print("Admin user 'admin' (password: 1423) created successfully")
+              } else {
+                  print("Users already exist, no new admin user created")
+              }
+              EOF
+              
+              # Execute the JavaScript file with mongosh
+              echo "Running MongoDB script to add admin user..."
+              mongosh ${MONGODB_URI} /tmp/account.js
+              
+              # Clean up
+              rm -f /tmp/account.js
+              
+              echo "Setting up subscriber information in MongoDB..."
+              # Add the basic subscriber first
+              open5gs-dbctl add_ue_with_slice ${IMSI} ${KI} ${OPC} ${APN} ${SST} ${SD}
+              echo "Subscriber added and updated with proper 5G fields successfully."
+              # Keep the container running
+              tail -f /dev/null
+          env:
+            - name: DB_URI
+              value: ${MONGODB_URI}
+              # Add this environment variable to disable force use of localhost
+            - name: DISABLE_LOCALHOST_MONGODB
+              value: "true"
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

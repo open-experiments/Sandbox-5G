@@ -1,0 +1,251 @@
+---
+# OpenShift Template for Open5GS AMF (Access and Mobility Management Function)
+# Author: Fatih E.NAR
+# Date: 4/11/2075 
+#
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: open5gs-amf
+  annotations:
+    description: "Access and Mobility Management Function (AMF) for Open5GS"
+    tags: "5g,open5gs,amf"
+    openshift.io/display-name: "Open5GS AMF"
+    openshift.io/documentation-url: "https://open5gs.org"
+    openshift.io/support-url: "https://github.com/open5gs/open5gs/issues"
+    iconClass: "icon-5g"
+parameters:
+- name: NAME
+  description: The name assigned to all of the objects defined in this template.
+  displayName: Name
+  required: true
+  value: "open5gs-amf"
+- name: NAMESPACE
+  description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  required: true
+  value: "open5gcore"
+- name: IMAGE_REGISTRY
+  description: The registry for the AMF image
+  displayName: Image Registry
+  required: true
+  value: "docker.io"
+- name: IMAGE_REPOSITORY
+  description: The repository for the AMF image
+  displayName: Image Repository
+  required: true
+  value: "gradiant/open5gs"
+- name: IMAGE_TAG
+  description: The image tag to be used
+  displayName: Image Tag
+  required: true
+  value: "2.7.5"
+- name: MCC
+  description: Mobile Country Code
+  displayName: MCC
+  required: true
+  value: "999"
+- name: MNC
+  description: Mobile Network Code
+  displayName: MNC
+  required: true
+  value: "70"
+- name: TAC
+  description: Tracking Area Code
+  displayName: TAC
+  required: true
+  value: "7"
+- name: SST
+  description: Slice/Service Type
+  displayName: SST
+  required: true
+  value: "1"
+- name: SD
+  description: Slice Differentiator
+  displayName: SD
+  required: true
+  value: "000001"
+- name: NRF_SVC
+  description: NRF Service Name
+  displayName: NRF Service
+  required: true
+  value: "open5gs-nrf"
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+  spec:
+    selector:
+      app: ${NAME}
+    ports:
+    - name: sbi
+      port: 80
+      targetPort: 7779
+      protocol: TCP
+    - name: ngap
+      port: 38412
+      targetPort: 38412
+      protocol: SCTP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${NAME}
+    strategy:
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          app.kubernetes.io/name: ${NAME}
+          app.kubernetes.io/part-of: open5gcore
+        annotations:
+          prometheus.io/scrape: "true" 
+          prometheus.io/port: "9090"
+      spec:
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        containers:
+        - name: amf
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          command: ["open5gs-amfd", "-c", "/open5gs/config-map/amf.yaml"]
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            # Force HTTP/1.1 for compatibility
+            - name: HTTP2_DISABLE
+              value: "true"
+          ports:
+            - name: sbi
+              containerPort: 7779
+              protocol: TCP
+            - name: ngap
+              containerPort: 38412
+              protocol: SCTP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["NET_ADMIN", "NET_RAW", "NET_BIND_SERVICE"]
+          volumeMounts:
+            - name: config-volume
+              mountPath: /open5gs/config-map
+            - name: shared-data
+              mountPath: /open5gs/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            tcpSocket:
+              port: 7779
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 7779
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        volumes:
+          - name: config-volume
+            configMap:
+              name: ${NAME}-config
+          - name: shared-data
+            emptyDir: {}
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ${NAME}-config
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  data:
+    amf.yaml: |
+      logger:
+        level: debug
+        domain: core
+
+      # AMF Configuration
+      amf:
+        sbi:
+          server:
+            - dev: eth0
+              port: 7779
+              http2: false  # Force HTTP/1.1 mode
+          client:
+            http2: false    # Force HTTP/1.1 mode
+            nrf:
+              - uri: http://${NRF_SVC}
+                http2: false
+        ngap:
+          server:
+            - dev: eth0
+              port: 38412
+        metrics:
+          server:
+            - dev: eth0
+              port: 9090
+        time:
+          t3512:
+            value: 540  # Timer value in seconds (1 hour)
+        guami:
+          - plmn_id:
+              mcc: ${MCC}
+              mnc: ${MNC}
+            amf_id:
+              region: 2
+              set: 1
+        tai:
+          - plmn_id:
+              mcc: ${MCC}
+              mnc: ${MNC}
+            tac: ${TAC}
+        plmn_support:
+          - plmn_id:
+              mcc: ${MCC}
+              mnc: ${MNC}
+            s_nssai:
+              - sst: ${SST}
+                sd: ${SD}
+        security:
+          integrity_order:
+            - NIA2
+            - NIA1
+            - NIA0
+          ciphering_order:
+            - NEA0
+            - NEA1
+            - NEA2
+        network_name:
+          full: Open5GS
+        amf_name: open5gs-amf

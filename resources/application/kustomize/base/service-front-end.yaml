@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: web-front-end
+    app.kubernetes.io/component: web-front-end
+    app.kubernetes.io/instance: web-front-end
+    app.kubernetes.io/name: web-front-end
+    app.kubernetes.io/part-of: app
+  name: web-front-end
+  namespace: rest-api-with-mesh
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http-port
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: web-front-end
+  sessionAffinity: None
+  type: ClusterIP

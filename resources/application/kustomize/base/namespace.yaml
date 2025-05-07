@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    #istio-discovery: enabled
+    istio-injection: enabled
+  name: rest-api-with-mesh

@@ -1,0 +1,140 @@
+---
+# OpenShift Template for MongoDB for Open5GS
+# Author: Fatih E.NAR
+# Date: 4/11/2075 
+#
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: open5gs-mongodb
+  annotations:
+    description: "MongoDB for Open5GS"
+    tags: "5g,open5gs,mongodb,database"
+    openshift.io/display-name: "MongoDB for Open5GS"
+    openshift.io/documentation-url: "https://www.mongodb.com"
+    openshift.io/support-url: "https://github.com/open5gs/open5gs/issues"
+    iconClass: "icon-mongodb"
+parameters:
+- name: NAME
+  description: The name assigned to all of the objects defined in this template.
+  displayName: Name
+  required: true
+  value: "open5gs-mongodb"
+- name: NAMESPACE
+  description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  required: true
+  value: "open5gcore"
+- name: IMAGE_REGISTRY
+  description: The registry for the MongoDB image
+  displayName: Image Registry
+  required: true
+  value: "docker.io"
+- name: IMAGE_REPOSITORY
+  description: The repository for the MongoDB image
+  displayName: Image Repository
+  required: true
+  value: "bitnami/mongodb"
+- name: IMAGE_TAG
+  description: The image tag to be used
+  displayName: Image Tag
+  required: true
+  value: "latest"
+- name: MONGODB_STORAGE_SIZE
+  description: Storage size for MongoDB (e.g., 1Gi, 10Gi)
+  displayName: MongoDB Storage Size
+  required: true
+  value: "20Gi"
+objects:
+# Service
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: mongo
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    selector:
+      app: ${NAME}
+    ports:
+    - port: 27017
+# PVC
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${NAME}-data
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${MONGODB_STORAGE_SIZE}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${NAME}
+    template:
+      metadata:
+        annotations:
+          sidecar.istio.io/inject: "true"
+        labels:
+          app: ${NAME}
+      spec:
+        containers:
+        - name: open5gs-mongodb
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: mongo
+              containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          livenessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - mongosh --eval "db.adminCommand('ping')"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - mongosh --eval "db.adminCommand('ping')"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+        volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: ${NAME}-data

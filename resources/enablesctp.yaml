@@ -1,0 +1,34 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: load-sctp-module
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+      - contents:
+          source: data:,
+        mode: 0644
+        overwrite: true
+        path: /etc/modules-load.d/sctp.conf
+        user:
+          name: root
+    systemd:
+      units:
+      - contents: |
+          [Unit]
+          Description=Load SCTP kernel module
+          After=network.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/sbin/modprobe sctp
+
+          [Install]
+          WantedBy=multi-user.target
+        enabled: true
+        name: sctp-load.service

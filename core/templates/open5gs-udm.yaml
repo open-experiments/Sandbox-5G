@@ -1,0 +1,194 @@
+---
+# OpenShift Template for Open5GS UDM (Unified Data Management)
+# Author: Fatih E.NAR
+# Date: 4/11/2075 
+#
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: open5gs-udm
+  annotations:
+    description: "Unified Data Management (UDM) for Open5GS"
+    tags: "5g,open5gs,udm"
+    openshift.io/display-name: "Open5GS UDM"
+    openshift.io/documentation-url: "https://open5gs.org"
+    openshift.io/support-url: "https://github.com/open5gs/open5gs/issues"
+    iconClass: "icon-5g"
+parameters:
+- name: NAME
+  description: The name assigned to all of the objects defined in this template.
+  displayName: Name
+  required: true
+  value: "open5gs-udm"
+- name: NAMESPACE
+  description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  required: true
+  value: "open5gcore"
+- name: IMAGE_REGISTRY
+  description: The registry for the UDM image
+  displayName: Image Registry
+  required: true
+  value: "docker.io"
+- name: IMAGE_REPOSITORY
+  description: The repository for the UDM image
+  displayName: Image Repository
+  required: true
+  value: "gradiant/open5gs"
+- name: IMAGE_TAG
+  description: The image tag to be used
+  displayName: Image Tag
+  required: true
+  value: "2.7.5"
+- name: NRF_SVC
+  description: NRF Service Name
+  displayName: NRF Service
+  required: true
+  value: "open5gs-nrf"
+- name: UDR_SVC
+  description: UDR Service Name
+  displayName: UDR Service
+  required: true
+  value: "open5gs-udr"
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+  spec:
+    selector:
+      app: ${NAME}
+    ports:
+    - name: sbi
+      port: 80
+      targetPort: 7779
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${NAME}
+    strategy:
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          app.kubernetes.io/name: ${NAME}
+          app.kubernetes.io/part-of: open5gcore
+        annotations:
+          prometheus.io/scrape: "true" 
+          prometheus.io/port: "9090"
+      spec:
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        containers:
+        - name: udm
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          command: ["open5gs-udmd", "-c", "/open5gs/config-map/udm.yaml"]
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            # Force HTTP/1.1 for compatibility
+            - name: HTTP2_DISABLE
+              value: "true"
+          ports:
+            - name: sbi
+              containerPort: 7779
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["NET_ADMIN", "NET_RAW", "NET_BIND_SERVICE"]
+          volumeMounts:
+            - name: config-volume
+              mountPath: /open5gs/config-map
+            - name: shared-data
+              mountPath: /open5gs/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          # Use TCP as initial probe instead of HTTP to avoid protocol issues
+          livenessProbe:
+            tcpSocket:
+              port: 7779
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 7779
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        volumes:
+          - name: config-volume
+            configMap:
+              name: ${NAME}-config
+          - name: shared-data
+            emptyDir: {}
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ${NAME}-config
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  data:
+    udm.yaml: |
+      logger:
+        level: debug
+        domain: core
+
+      # UDM Configuration
+      udm:
+        sbi:
+          server:
+            - dev: eth0
+              port: 7779
+              http2: false
+          client:
+            http2: false
+            nrf:
+              - uri: http://${NRF_SVC}
+                http2: false
+            udr:
+              - uri: http://${UDR_SVC}
+                http2: false
+        metrics:
+          server:
+            - dev: eth0
+              port: 9090
+        discovery:
+          option:
+            no_nrf: false
+            no_scp: true

@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: service-b
+  namespace: rest-api-with-mesh
+spec:
+  hosts:
+    - service-b
+  http:
+  - route:
+    - destination:
+        host: service-b
+        subset: v1
+        port:
+          number: 8080
+      weight: 100
+    - destination:
+        host: service-b
+        subset: v2
+        port:
+          number: 8080
+      weight: 0

@@ -1,0 +1,133 @@
+---
+# OpenShift Template for Open5GS WebUI
+# Author: Fatih E.NAR
+# Date: 4/11/2075 
+#
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: open5gs-webui
+  annotations:
+    description: "Web User Interface for Open5GS"
+    tags: "5g,open5gs,webui"
+    openshift.io/display-name: "Open5GS WebUI"
+    openshift.io/documentation-url: "https://open5gs.org"
+    openshift.io/support-url: "https://github.com/open5gs/open5gs/issues"
+    iconClass: "icon-5g"
+parameters:
+- name: NAME
+  description: The name assigned to all of the objects defined in this template.
+  displayName: Name
+  required: true
+  value: "open5gs-webui"
+- name: NAMESPACE
+  description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  required: true
+  value: "open5gcore"
+- name: IMAGE_REGISTRY
+  description: The registry for the WebUI image
+  displayName: Image Registry
+  required: true
+  value: "docker.io"
+- name: IMAGE_REPOSITORY
+  description: The repository for the WebUI image
+  displayName: Image Repository
+  required: true
+  value: "gradiant/open5gs-webui"
+- name: IMAGE_TAG
+  description: The image tag to be used
+  displayName: Image Tag
+  required: true
+  value: "2.7.5"
+- name: MONGODB_URI
+  description: MongoDB URI
+  displayName: MongoDB URI
+  required: true
+  value: "mongodb://mongo/open5gs"
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    selector:
+      app: ${NAME}
+    ports:
+    - port: 80
+      targetPort: 9999
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    to:
+      kind: Service
+      name: ${NAME}
+    port:
+      targetPort: 9999
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Allow
+    wildcardPolicy: None
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+      app.kubernetes.io/name: ${NAME}
+      app.kubernetes.io/part-of: open5gcore
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${NAME}
+    strategy:
+      type: RollingUpdate
+    template:
+      metadata:
+        annotations:
+          sidecar.istio.io/inject: "true"
+        labels:
+          app: ${NAME}
+          app.kubernetes.io/name: ${NAME}
+          app.kubernetes.io/part-of: open5gcore
+      spec:
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        containers:
+        - name: webui
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_URI
+              value: mongodb://mongo/open5gs
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 5
+            periodSeconds: 5

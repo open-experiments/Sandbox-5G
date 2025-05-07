@@ -1,0 +1,52 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-sbi-communication
+  namespace: open5gcore
+spec:
+  podSelector: {}
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 7777  # NRF
+    - protocol: TCP
+      port: 7778  # SCP
+    - protocol: TCP
+      port: 7779  # AMF
+    - protocol: TCP
+      port: 7780  # SMF
+    - protocol: TCP
+      port: 7781  # AUSF
+    - protocol: TCP
+      port: 7782  # UDM
+    - protocol: TCP
+      port: 7783  # PCF
+    - protocol: TCP
+      port: 7784  # UDR
+    - protocol: TCP
+      port: 7785  # BSF
+    - protocol: TCP
+      port: 7786  # NSSF
+    - protocol: TCP
+      port: 15000 # Istio proxy admin port
+    - protocol: TCP
+      port: 15001 # Istio proxy outbound port
+    - protocol: TCP
+      port: 15006 # Istio proxy inbound port
+    - protocol: TCP
+      port: 15090 # Istio metrics port
+    - protocol: UDP
+      port: 8805
+    - protocol: UDP
+      port: 2152
+    - protocol: TCP
+      port: 27017
+    - protocol: SCTP
+      port: 38412  # NGAP
+  egress:
+  - {}
+  policyTypes:
+  - Ingress
+  - Egress

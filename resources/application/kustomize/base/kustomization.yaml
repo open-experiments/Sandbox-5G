@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+  
+resources:
+- namespace.yaml
+- deployment-front-end.yaml 
+- service-front-end.yaml
+- service-back-end.yaml
+- destination-rule-back-end.yaml
+- virtual-service-back-end.yaml
+- pod-monitor.yaml
+- hello-http-route.yaml
