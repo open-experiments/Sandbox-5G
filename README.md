@@ -1,4 +1,4 @@
-# Open5GS 5G Core with UERANSIM for OpenShift Container Platform
+# 5G Core with Radio Access Network Simulator
 
 This repository provides a complete 5g sandbox with Open5GS-based 5G Core Network + containerized UERANSIM. <br>
 It implements Cloud-Native Network Functions (CNFs) with comprehensive monitoring, logging, and tracing capabilities.
