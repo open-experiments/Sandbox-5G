@@ -2,7 +2,7 @@
 
 This repository provides a complete solution for deploying an Open5GS-based 5G Core Network with UERANSIM radio simulation on OpenShift Container Platform. It implements Cloud-Native Network Functions (CNFs) with comprehensive monitoring, logging, and tracing capabilities.
 
-![Architecture](https://placeholder-for-architecture-diagram.png)
+![Architecture](https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/arch.png)
 
 ## Features
 
