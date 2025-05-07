@@ -9,7 +9,7 @@ This repository provides a complete solution for deploying an Open5GS-based 5G C
 - **Fully containerized 5G Core Network Functions** based on Open5GS v2.7.5
 - **Simulated RAN environment** with UERANSIM v3.2.6
 - **Comprehensive monitoring stack** with Prometheus, Grafana, Jaeger, ELK
-- **Service Mesh integration** with OpenShift Service Mesh (Istio)
+- **Service Mesh integration** with OpenShift Service Mesh 3 (Istio Upstream)
 - **Optimized HTTP configuration** using HTTP/1.1 for SBI communications
 - **Automated deployment scripts** for easy installation and configuration
 - **Custom metrics and dashboards** for 5G Core performance monitoring
@@ -32,7 +32,7 @@ This repository provides a complete solution for deploying an Open5GS-based 5G C
 | **WebUI** | Web interface for subscriber management |
 | **MongoDB** | Database for storing subscriber data |
 
-### RAN Simulation (UERANSIM)
+### RAN Simulation (UERANSIM Single POD with 3 Containers)
 
 | Component | Description |
 |-----------|-------------|
@@ -53,13 +53,14 @@ This repository provides a complete solution for deploying an Open5GS-based 5G C
 
 ## Prerequisites
 
-- OpenShift Container Platform 4.12+ (tested on 4.12)
+- OpenShift Container Platform 4.18+ (tested on 4.18.9)
+- Red Hat build of OpenTelemetry
+- OSSM3-v3.0.0
 - Cluster administrator access
 - SCTP protocol support enabled on worker nodes
 - Sufficient cluster resources (at least 3 worker nodes recommended)
 - OpenShift CLI (`oc`) installed and configured
-- The following operators installed:
-  - Red Hat OpenShift Service Mesh
+- The following additional operators installed:
   - Kiali Operator
   - OpenTelemetry Operator
   - Tempo Operator
@@ -71,17 +72,17 @@ This repository provides a complete solution for deploying an Open5GS-based 5G C
 First, clone this repository and run the preparation script to install required operators and configure the service mesh:
 
 ```bash
-git clone https://github.com/yourusername/open5gs-openshift.git
-cd open5gs-openshift
+git clone https://github.com/open-experiments/sandbox-5g.git
+cd sandbox-5g
 ./prepstep.sh
 ```
 
-This script will:
+This script (To Be Run ONLY ONCE!) will:
 - Install required operators via subscription
 - Enable Gateway API support
 - Set up Minio for Tempo tracing
 - Install OpenTelemetry Collector
-- Configure OpenShift Service Mesh
+- Configure OpenShift Service Mesh 3
 - Set up Kiali for visualization
 - Enable SCTP protocol on worker nodes (requires node reboot)
 
@@ -120,7 +121,7 @@ This creates:
 Deploy the simulated Radio Access Network components:
 
 ```bash
-./deploy-ueransim.sh
+./ran/deploy-ueransim.sh
 ```
 
 This script automatically:
@@ -203,7 +204,7 @@ oc logs deployment/5gran -c uebinder -n open5gcore
    - Ensure network policies allow connections
 
 2. **UE cannot register**:
-   - Check that the subscriber exists in the WebUI
+   - Check that the subscriber exists in MongoDB -> Go to the WebUI (admin/1423) to check the record.
    - Verify AMF and UDM logs for authentication issues
    - Ensure the UE configuration matches core settings
 
@@ -226,7 +227,7 @@ For more detailed analysis, use Kibana to query logs across all components.
 ### Remove UERANSIM
 
 ```bash
-./delete-ueransim.sh
+./ran/delete-ueransim.sh
 ```
 
 ### Remove 5G Core
