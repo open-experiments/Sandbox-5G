@@ -1,6 +1,7 @@
 # 5G-Core with Radio Access Network Simulator on Openshift-4
 
-This repository provides a complete up to date (See Release Notes Below) 5G Stack with RAN Simulation on Red Hat Openshift. We enabled Metrics Collection with Red Hat Open Telemetry (OTel) Operator and Openshift Service Mesh 3 for Complete Obserbility of 5G Applications. The hadrvested data being used by Grafana Dashboard for Visualization of these Aplications' Performances.<br>
+This repository provides a complete up to date (See Release Notes Below) 5G Stack with RAN Simulation on Red Hat Openshift. We enabled Metrics Collection with Red Hat Open Telemetry (OTel) Operator and Openshift Service Mesh 3 for Complete Observability of 5G Applications. The harvested CNF data being used by Grafana Dashboard for Visualization of these Aplications' Performances.<br>
+---
 Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
 
 <div align="left">
