@@ -1,6 +1,7 @@
 # 5G-Core with Radio Access Network Simulator on Openshift-4
 
-This repository provides a complete 5g sandbox with Open5GS-based 5G Core Network + containerized UERANSIM, all on a Openshift Cluster with pods. It deploys CNFs with monitoring capabilities.
+This repository provides a complete up to date (See Release Notes Below) 5G Stack with RAN Simulation on Red Hat Openshift. We enabled Metrics Collection with Red Hat Open Telemetry (OTel) Operator and Openshift Service Mesh 3 for Complete Obserbility of 5G Applications. The hadrvested data being used by Grafana Dashboard for Visualization of these Aplications' Performances.<br>
+Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
 
 <div align="left">
     <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/arch.png" width="321"/>
