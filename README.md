@@ -118,7 +118,7 @@ This creates:
 - ELK stack (Elasticsearch, Fluent Bit, Kibana) for log management
 
 <div align="left">
-    <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/grafana.png" width="800"/>
+    <img src="https://raw.githubusercontent.com/open-experiments/Sandbox-5G/refs/heads/main/images/grafana.png" width="800"/>
 </div>
 
 ### 4. Deploy UERANSIM
