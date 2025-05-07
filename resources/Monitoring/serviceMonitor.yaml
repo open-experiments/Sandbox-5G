@@ -11,3 +11,22 @@ spec:
   endpoints:
   - port: http-monitoring
     interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: open5gs-servicemonitor
+  labels:
+    app: open5gs-servicemonitor
+    monitoring: open5gs
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: open5gcore
+  namespaceSelector:
+    matchNames:
+      - ${NAMESPACE}
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics

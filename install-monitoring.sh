@@ -7,77 +7,23 @@ set -e
 
 NAMESPACE="open5gcore"
 MONITORING_NAMESPACE="open5gs-monitoring"
+DIR="$(dirname "$0")"
+DASHBOARD_DIR="${DIR}/resources/dashboard"
+MONITORING_DIR="${DIR}/resources/Monitoring"
+
+# Set timeout for component readiness (5 minutes)
+TIMEOUT=300
 
 echo -e "Creating Monitoring Namespace: ${MONITORING_NAMESPACE}\n"
 oc new-project ${MONITORING_NAMESPACE} || true
 
 echo -e "Creating ServiceMonitor for Open5GS components\n"
-cat <<EOF | oc apply -n ${MONITORING_NAMESPACE} -f -
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: open5gs-servicemonitor
-  labels:
-    app: open5gs-servicemonitor
-    monitoring: open5gs
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/part-of: open5gcore
-  namespaceSelector:
-    matchNames:
-      - ${NAMESPACE}
-  endpoints:
-  - port: metrics
-    interval: 30s
-    path: /metrics
-EOF
+cat ${MONITORING_DIR}/serviceMonitor.yaml | sed "s/\${NAMESPACE}/${NAMESPACE}/g" | oc apply -n ${MONITORING_NAMESPACE} -f -
 
 echo -e "Deploying Prometheus\n"
+cat ${MONITORING_DIR}/prometheus-config.yaml | sed "s/\${NAMESPACE}/${NAMESPACE}/g" | oc apply -n ${MONITORING_NAMESPACE} -f -
+
 cat <<EOF | oc apply -n ${MONITORING_NAMESPACE} -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-config
-data:
-  prometheus.yml: |
-    global:
-      scrape_interval: 15s
-      evaluation_interval: 15s
-    
-    scrape_configs:
-      - job_name: 'prometheus'
-        static_configs:
-          - targets: ['localhost:9090']
-      
-      - job_name: 'open5gs'
-        kubernetes_sd_configs:
-          - role: service
-            namespaces:
-              names:
-                - ${NAMESPACE}
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
-            action: keep
-            regex: true
-          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
-            action: replace
-            target_label: __metrics_path__
-            regex: (.+)
-          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
-            action: replace
-            regex: ([^:]+)(?::\\d+)?;(\\d+)
-            replacement: \$1:\$2
-            target_label: __address__
-          - action: labelmap
-            regex: __meta_kubernetes_service_label_(.+)
-          - source_labels: [__meta_kubernetes_namespace]
-            action: replace
-            target_label: kubernetes_namespace
-          - source_labels: [__meta_kubernetes_service_name]
-            action: replace
-            target_label: kubernetes_name
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -96,12 +42,14 @@ spec:
     spec:
       containers:
       - name: prometheus
-        image: prom/prometheus:v2.38.0
+        image: prom/prometheus:v2.47.0
         args:
           - "--config.file=/etc/prometheus/prometheus.yml"
           - "--storage.tsdb.path=/prometheus"
+          - "--storage.tsdb.retention.time=15d"
           - "--web.console.libraries=/usr/share/prometheus/console_libraries"
           - "--web.console.templates=/usr/share/prometheus/consoles"
+          - "--web.enable-lifecycle"
         ports:
         - containerPort: 9090
         volumeMounts:
@@ -184,148 +132,24 @@ data:
       updateIntervalSeconds: 10
       options:
         path: /var/lib/grafana/dashboards
----
+EOF
+
+# Create ConfigMap for Grafana dashboards
+echo -e "Creating Grafana dashboards ConfigMap\n"
+cat <<EOF | oc apply -n ${MONITORING_NAMESPACE} -f -
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboards
 data:
   open5gs-dashboard.json: |
-    {
-      "annotations": {
-        "list": [
-          {
-            "builtIn": 1,
-            "datasource": "-- Grafana --",
-            "enable": true,
-            "hide": true,
-            "iconColor": "rgba(0, 211, 255, 1)",
-            "name": "Annotations & Alerts",
-            "type": "dashboard"
-          }
-        ]
-      },
-      "editable": true,
-      "gnetId": null,
-      "graphTooltip": 0,
-      "id": 1,
-      "links": [],
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "Prometheus",
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": []
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 0
-          },
-          "hiddenSeries": false,
-          "id": 2,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "7.4.0",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "up{kubernetes_namespace=\"open5gcore\"}",
-              "interval": "",
-              "legendFormat": "{{kubernetes_name}}",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Open5GS Component Status",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
-      "refresh": "10s",
-      "schemaVersion": 27,
-      "style": "dark",
-      "tags": [],
-      "templating": {
-        "list": []
-      },
-      "time": {
-        "from": "now-6h",
-        "to": "now"
-      },
-      "timepicker": {},
-      "timezone": "",
-      "title": "Open5GS Dashboard",
-      "uid": "open5gs",
-      "version": 1
-    }
----
+$(cat ${DASHBOARD_DIR}/open5gs-dashboard.json | sed 's/^/    /')
+  5g-network-stats.json: |
+$(cat ${DASHBOARD_DIR}/5g-network-stats.json | sed 's/^/    /')
+EOF
+
+# Deploy Grafana
+cat <<EOF | oc apply -n ${MONITORING_NAMESPACE} -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -344,10 +168,19 @@ spec:
     spec:
       containers:
       - name: grafana
-        image: grafana/grafana:latest
+        image: grafana/grafana:10.0.3
         ports:
         - containerPort: 3000
           name: http
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
+        - name: GF_INSTALL_PLUGINS
+          value: "grafana-piechart-panel,grafana-clock-panel"
         volumeMounts:
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
@@ -364,6 +197,18 @@ spec:
           limits:
             cpu: 500m
             memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
       volumes:
       - name: grafana-datasources
         configMap:
@@ -407,6 +252,8 @@ spec:
 EOF
 
 echo -e "Deploying FluentBit for log collection\n"
+cat ${MONITORING_DIR}/fluent-bit-config.yaml | sed "s/\${NAMESPACE}/${NAMESPACE}/g" | oc apply -n ${MONITORING_NAMESPACE} -f -
+
 cat <<EOF | oc apply -n ${MONITORING_NAMESPACE} -f -
 apiVersion: v1
 kind: ServiceAccount
@@ -437,93 +284,6 @@ subjects:
   name: fluent-bit
   namespace: ${MONITORING_NAMESPACE}
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: fluent-bit-config
-data:
-  fluent-bit.conf: |
-    [SERVICE]
-        Flush         1
-        Log_Level     info
-        Daemon        off
-        Parsers_File  parsers.conf
-        HTTP_Server   On
-        HTTP_Listen   0.0.0.0
-        HTTP_Port     2020
-
-    [INPUT]
-        Name              tail
-        Tag               kube.*
-        Path              /var/log/containers/*open5gs*.log
-        Parser            docker
-        DB                /var/log/flb_kube.db
-        Mem_Buf_Limit     5MB
-        Skip_Long_Lines   On
-        Refresh_Interval  10
-
-    [FILTER]
-        Name                kubernetes
-        Match               kube.*
-        Kube_URL            https://kubernetes.default.svc:443
-        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
-        Kube_Tag_Prefix     kube.var.log.containers.
-        Merge_Log           On
-        Merge_Log_Key       log_processed
-        K8S-Logging.Parser  On
-        K8S-Logging.Exclude Off
-
-    [OUTPUT]
-        Name            es
-        Match           *
-        Host            elasticsearch
-        Port            9200
-        Logstash_Format On
-        Logstash_Prefix open5gs
-        Replace_Dots    On
-        Retry_Limit     False
-
-  parsers.conf: |
-    [PARSER]
-        Name   apache
-        Format regex
-        Regex  ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
-        Time_Key time
-        Time_Format %d/%b/%Y:%H:%M:%S %z
-
-    [PARSER]
-        Name   apache2
-        Format regex
-        Regex  ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^ ]*) +\S*)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
-        Time_Key time
-        Time_Format %d/%b/%Y:%H:%M:%S %z
-
-    [PARSER]
-        Name   apache_error
-        Format regex
-        Regex  ^\[[^ ]* (?<time>[^\]]*)\] \[(?<level>[^\]]*)\](?: \[pid (?<pid>[^\]]*)\])?( \[client (?<client>[^\]]*)\])? (?<message>.*)$
-
-    [PARSER]
-        Name   nginx
-        Format regex
-        Regex ^(?<remote>[^ ]*) (?<host>[^ ]*) (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
-        Time_Key time
-        Time_Format %d/%b/%Y:%H:%M:%S %z
-
-    [PARSER]
-        Name   json
-        Format json
-        Time_Key time
-        Time_Format %d/%b/%Y:%H:%M:%S %z
-
-    [PARSER]
-        Name        docker
-        Format      json
-        Time_Key    time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
-        Time_Keep   On
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -542,7 +302,7 @@ spec:
       serviceAccountName: fluent-bit
       containers:
       - name: fluent-bit
-        image: fluent/fluent-bit:latest
+        image: fluent/fluent-bit:2.1.9
         volumeMounts:
         - name: varlog
           mountPath: /var/log
@@ -558,6 +318,13 @@ spec:
           limits:
             cpu: 500m
             memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 2020
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
       volumes:
       - name: varlog
         hostPath:
@@ -587,15 +354,23 @@ spec:
     metadata:
       labels:
         app: elasticsearch
+      annotations:
+        co.elastic.logs/enabled: "true"
     spec:
       containers:
       - name: elasticsearch
-        image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
         env:
         - name: discovery.type
           value: single-node
         - name: ES_JAVA_OPTS
           value: "-Xms512m -Xmx512m"
+        - name: xpack.security.enabled
+          value: "false"
+        - name: xpack.security.transport.ssl.enabled
+          value: "false"
+        - name: node.store.allow_mmap
+          value: "false"
         ports:
         - containerPort: 9200
           name: http
@@ -611,6 +386,25 @@ spec:
           limits:
             cpu: 1000m
             memory: 2Gi
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: 9200
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: 9200
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
       volumes:
       - name: elasticsearch-data
         emptyDir: {}
@@ -653,10 +447,12 @@ spec:
     spec:
       containers:
       - name: kibana
-        image: docker.elastic.co/kibana/kibana:7.10.2
+        image: docker.elastic.co/kibana/kibana:8.9.0
         env:
         - name: ELASTICSEARCH_HOSTS
           value: http://elasticsearch:9200
+        - name: XPACK_SECURITY_ENABLED
+          value: "false"
         ports:
         - containerPort: 5601
           name: http
@@ -667,6 +463,20 @@ spec:
           limits:
             cpu: 1000m
             memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 120
+          periodSeconds: 20
+          timeoutSeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -697,6 +507,75 @@ spec:
     insecureEdgeTerminationPolicy: Redirect
 EOF
 
+# Enable user workload monitoring in OCP
+echo -e "Enabling user workload monitoring in OCP\n"
+oc apply -f ${MONITORING_DIR}/ocpUserMonitoring.yaml
+
+# Wait for Elasticsearch to be ready with timeout
+echo -e "Waiting for Elasticsearch to become ready...\n"
+START_TIME=$(date +%s)
+
+# Wait for the pod to be Running
+until oc get pods -l app=elasticsearch -n ${MONITORING_NAMESPACE} -o jsonpath='{.items[0].status.phase}' | grep -q Running; do
+  CURRENT_TIME=$(date +%s)
+  if [ $((CURRENT_TIME - START_TIME)) -gt ${TIMEOUT} ]; then
+    echo "Timeout waiting for Elasticsearch pod to enter Running state. Continuing anyway..."
+    break
+  fi
+  echo "Waiting for Elasticsearch pod to be running..."
+  sleep 10
+done
+
+# Wait for the pod to be Ready based on readiness probe
+echo "Waiting for Elasticsearch to become ready (based on readiness probe)..."
+until oc get pods -l app=elasticsearch -n ${MONITORING_NAMESPACE} -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null | grep -q "true"; do
+  CURRENT_TIME=$(date +%s)
+  if [ $((CURRENT_TIME - START_TIME)) -gt ${TIMEOUT} ]; then
+    echo "Timeout waiting for Elasticsearch readiness. Continuing anyway..."
+    break
+  fi
+  echo "Waiting for Elasticsearch to become ready..."
+  sleep 10
+done
+
+# Wait for Kibana to be ready with timeout
+echo -e "Waiting for Kibana to become ready...\n"
+START_TIME=$(date +%s)
+
+# Wait for Kibana pods to be Running
+until oc get pods -l app=kibana -n ${MONITORING_NAMESPACE} -o jsonpath='{.items[0].status.phase}' 2>/dev/null | grep -q Running; do
+  CURRENT_TIME=$(date +%s)
+  if [ $((CURRENT_TIME - START_TIME)) -gt ${TIMEOUT} ]; then
+    echo "Timeout waiting for Kibana pod to enter Running state. Continuing anyway..."
+    break
+  fi
+  echo "Waiting for Kibana pod to be running..."
+  sleep 10
+done
+
+# Wait for Kibana to be Ready based on readiness probe
+echo "Waiting for Kibana to become ready (based on readiness probe)..."
+until oc get pods -l app=kibana -n ${MONITORING_NAMESPACE} -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null | grep -q "true"; do
+  CURRENT_TIME=$(date +%s)
+  if [ $((CURRENT_TIME - START_TIME)) -gt ${TIMEOUT} ]; then
+    echo "Timeout waiting for Kibana readiness. Continuing anyway..."
+    break
+  fi
+  echo "Waiting for Kibana to become ready..."
+  sleep 10
+done
+
+# Try to create Kibana index pattern, but don't fail if it doesn't work
+echo -e "Setting up Kibana index patterns for Open5GS logs...\n"
+# Check if kibana pod exists and is ready
+if oc get pods -l app=kibana -n ${MONITORING_NAMESPACE} -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null | grep -q "true"; then
+  echo "Creating Kibana index pattern..."
+  # Try to create index pattern, but don't stop script if it fails
+  oc exec -n ${MONITORING_NAMESPACE} $(oc get pods -l app=kibana -n ${MONITORING_NAMESPACE} -o jsonpath='{.items[0].metadata.name}') -- curl -X POST -H "Content-Type: application/json" -H "kbn-xsrf: true" http://localhost:5601/api/saved_objects/index-pattern/open5gs -d '{"attributes":{"title":"open5gs-*","timeFieldName":"@timestamp"}}' || echo "Failed to create Kibana index pattern. You may need to create it manually."
+else
+  echo "Kibana is not ready yet. Index pattern will need to be created manually."
+fi
+
 # Get the routes for accessing the monitoring dashboards
 PROMETHEUS_ROUTE=$(oc get route prometheus -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "prometheus-route-not-found")
 GRAFANA_ROUTE=$(oc get route grafana -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "grafana-route-not-found")
@@ -707,3 +586,6 @@ echo -e "Access the monitoring dashboards at:"
 echo -e "  Prometheus: https://${PROMETHEUS_ROUTE}"
 echo -e "  Grafana: https://${GRAFANA_ROUTE} (Default credentials: admin/admin)"
 echo -e "  Kibana: https://${KIBANA_ROUTE}"
+echo -e "\nThe monitoring stack is now collecting metrics from your Open5GS deployment."
+echo -e "Note: The custom 5G metrics dashboards assume that Open5GS components expose additional metrics"
+echo -e "specific to 5G operations. You may need to extend the components to expose these metrics."
