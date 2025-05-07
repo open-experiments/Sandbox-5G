@@ -230,6 +230,11 @@ oc logs deployment/<component-name> -n open5gcore
 
 For more detailed analysis, use Kibana to query logs across all components.
 
+### Service Mesh with LightSpeed 
+<div align="left">
+    <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/ossm3-lightspeed.png" width="840"/>
+</div>
+
 ## Cleanup
 
 ### Remove UERANSIM
