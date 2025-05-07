@@ -1,4 +1,4 @@
-# 5G Core with Radio Access Network Simulator
+# 5G-Core with Radio Access Network Simulator
 
 This repository provides a complete 5g sandbox with Open5GS-based 5G Core Network + containerized UERANSIM. <br>
 It implements Cloud-Native Network Functions (CNFs) with comprehensive monitoring, logging, and tracing capabilities.
