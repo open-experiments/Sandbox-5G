@@ -1,12 +1,16 @@
 # 5G-Core with Radio Access Network Simulator on Openshift-4
 
 This repository provides a complete up to date (See Release Notes Below) 5G Stack with RAN Simulation on Red Hat Openshift. We enabled Metrics Collection with Red Hat Open Telemetry (OTel) Operator and Openshift Service Mesh 3 for Complete Observability of 5G Applications. The harvested CNF data being used by Grafana Dashboard for Visualization of these Aplications' Performances.<br>
----
+
 Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
+
+---
 
 <div align="left">
     <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/arch.png" width="321"/>
 </div>
+
+---
 
 ## Features
 
@@ -17,6 +21,8 @@ Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
 - **Optimized HTTP configuration** using HTTP/1.1 for SBI communications
 - **Automated deployment scripts** for easy installation and configuration
 - **Custom metrics and dashboards** for 5G Core performance monitoring
+
+---
 
 ## Architecture Components
 
@@ -54,6 +60,8 @@ Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
 | **Kibana** | Log visualization and analysis |
 | **Fluent Bit** | Log collection and forwarding |
 
+---
+
 ## Prerequisites
 
 - OpenShift Container Platform 4.18+ (tested on 4.18.9)
@@ -67,6 +75,8 @@ Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
   - Kiali Operator
   - OpenTelemetry Operator
   - Tempo Operator
+
+---
 
 ## Installation
 
@@ -137,6 +147,8 @@ This script automatically:
 - Deploys gNB and UE components
 - Configures the UE Binder for network connectivity
 
+---
+
 ## Accessing the Components
 
 After deployment, you can access the following interfaces:
@@ -148,6 +160,8 @@ After deployment, you can access the following interfaces:
 | **Prometheus** | `https://$(oc get route prometheus -n open5gs-monitoring -o jsonpath='{.spec.host}')` | N/A |
 | **Kibana** | `https://$(oc get route kibana -n open5gs-monitoring -o jsonpath='{.spec.host}')` | N/A |
 | **Kiali** | `https://$(oc get route kiali -n istio-system -o jsonpath='{.spec.host}')` | N/A |
+
+---
 
 ## Configuration
 
@@ -169,6 +183,8 @@ You can customize the deployment by editing the following files:
 - **UE settings**: Modify `5gran-ue-configmap.yaml` to change UE parameters
 - **gNB settings**: The gNB config is dynamically generated in `deploy-ueransim.sh`
 - **Monitoring settings**: Modify dashboard definitions in `deploy-monitoring.sh`
+
+---
 
 ## Testing the Deployment
 
@@ -204,6 +220,8 @@ Verify data connectivity through the UE binder:
 oc logs deployment/5gran -c uebinder -n open5gcore
 ```
 
+---
+
 ## Troubleshooting
 
 ### Common Issues
@@ -237,6 +255,8 @@ For more detailed analysis, use Kibana to query logs across all components.
     <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/ossm3-lightspeed.png" width="840"/>
 </div>
 
+---
+
 ## Cleanup
 
 ### Remove UERANSIM
@@ -264,11 +284,15 @@ This will:
 - Remove ConfigMaps
 - Provide an option to delete persistent volume claims for MongoDB
 
+---
+
 ## Performance Considerations
 
 - The default resource limits are set for a development environment
 - For production use, increase CPU/memory limits in deployment templates
 - MongoDB performance is critical - consider using a dedicated storage class
+
+---
 
 ## Security Considerations
 
@@ -277,17 +301,24 @@ This will:
 - TLS termination is handled at the OpenShift routes
 - For production, implement additional network policies and use external identity providers
 
+---
+
 ## License
 
 This project is based on:
 - [Open5GS](https://open5gs.org/) - AGPL-3.0
 - [UERANSIM](https://github.com/aligungr/UERANSIM) - GPL-3.0
 
+---
+
 ## Acknowledgments
 
 - Gradiant 5G Charts (https://github.com/Gradiant/5g-charts)
 - Open5GS Community
 - UERANSIM Project
+
+
+---
 
 ## Contributing
 
