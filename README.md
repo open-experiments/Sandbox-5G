@@ -2,7 +2,9 @@
 
 This repository provides a complete 5g sandbox with Open5GS-based 5G Core Network + containerized UERANSIM, all on a Openshift Cluster with pods. It deploys CNFs with monitoring, logging, and tracing capabilities.
 
-![Architecture](https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/arch.png)
+<div align="left">
+    <img src="https://raw.githubusercontent.com/open-experiments/sandbox-5g/refs/heads/main/images/arch.png" width="350"/>
+</div>
 
 ## Features
 
