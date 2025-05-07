@@ -4,7 +4,7 @@
 #
 echo "Installing open5gcore..."
 oc new-project open5gcore
-echo "Adding open5gcore namespace as a part of the mesh"
+echo "Labeling open5gcore namespace as a part of the mesh"
 oc label namespace open5gcore istio-injection=enabled
 echo "Enabling pod monitor in open5gcore namespace"
 oc apply -f ./resources/Monitoring/podMonitor.yaml -n open5gcore

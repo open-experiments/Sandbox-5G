@@ -4,7 +4,7 @@
 #
 
 set -e
-
+oc project ${NAMESPACE}
 NAMESPACE="open5gcore"
 MONGODB_URI="mongodb://mongo/open5gs"  # Using service name for MongoDB
 IMSI="999700000000001"

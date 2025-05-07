@@ -9,6 +9,22 @@ AMF_IP=$(oc get services -n open5gcore | grep open5gs-amf | awk '{print $3}')
 echo "AMF IP:"
 echo $AMF_IP
 
+NAMESPACE="open5gran"
+echo "Installing open5gran..."
+oc new-project ${NAMESPACE}
+echo "Adding open5gran namespace as a part of the mesh"
+oc label namespace ${NAMESPACE} istio-injection=enabled
+echo "Enabling pod monitor in open5gran namespace"
+echo -e "Configuring privileged access for all containers in the namespace\n"
+# Configure the namespace with necessary SCCs
+oc adm policy add-scc-to-user anyuid -z default -n ${NAMESPACE} || true
+oc adm policy add-scc-to-user hostaccess -z default -n ${NAMESPACE} || true
+oc adm policy add-scc-to-user hostmount-anyuid -z default -n ${NAMESPACE} || true
+oc adm policy add-scc-to-user privileged -z default -n ${NAMESPACE} || true
+oc adm policy add-scc-to-user net-bind-service -z default -n ${NAMESPACE} || true
+oc apply -f ./etc/scc-5gran.yaml -n ${NAMESPACE}
+oc apply -f ./../resources/Monitoring/podMonitor.yaml -n ${NAMESPACE}
+
 # Create temp file with correct format
 cat > 5gran-gnb-configmap.yaml << EOF
 kind: ConfigMap
