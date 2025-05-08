@@ -55,7 +55,7 @@ Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
 | Component | Description |
 |-----------|-------------|
 | **OTel** | Data Ingest, Process and Export |
-| **Prometheus** | Metrics collection and storage |
+| **Prometheus** | Metrics storage |
 | **Grafana** | Metrics visualization with custom 5G dashboards |
 | **Loki** | Log storage and indexing |
 | **Tempo** | Traces |
