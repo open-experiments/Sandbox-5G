@@ -313,7 +313,6 @@ This project is based on:
 
 ## Acknowledgments
 
-- Gradiant 5G Charts (https://github.com/Gradiant/5g-charts)
 - Open5GS Community
 - UERANSIM Project
 
