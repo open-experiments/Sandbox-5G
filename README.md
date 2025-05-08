@@ -56,9 +56,8 @@ Release Notes: https://github.com/open5gs/open5gs/releases/tag/v2.7.5 <br>
 |-----------|-------------|
 | **Prometheus** | Metrics collection and storage |
 | **Grafana** | Metrics visualization with custom 5G dashboards |
-| **Elasticsearch** | Log storage and indexing |
-| **Kibana** | Log visualization and analysis |
-| **Fluent Bit** | Log collection and forwarding |
+| **Loki** | Log storage and indexing |
+| **Tempo** | Traces |
 
 ---
 
@@ -126,8 +125,8 @@ Set up the monitoring infrastructure:
 This creates:
 - Prometheus instance with ServiceMonitor for 5G Core metrics
 - Grafana with pre-configured dashboards for 5G Core monitoring
-- Jaeger for distributed tracing
-- ELK stack (Elasticsearch, Fluent Bit, Kibana) for log management
+- Tempo for distributed tracing
+- Loki for log management
 
 <div align="left">
     <img src="https://raw.githubusercontent.com/open-experiments/Sandbox-5G/refs/heads/main/images/grafana.png" width="800"/>
@@ -158,8 +157,6 @@ After deployment, you can access the following interfaces:
 | **5G Core WebUI** | `https://$(oc get route open5gs-webui -n open5gcore -o jsonpath='{.spec.host}')` | admin / 1423 |
 | **Grafana** | `https://$(oc get route grafana -n open5gs-monitoring -o jsonpath='{.spec.host}')` | admin / admin |
 | **Prometheus** | `https://$(oc get route prometheus -n open5gs-monitoring -o jsonpath='{.spec.host}')` | N/A |
-| **Kibana** | `https://$(oc get route kibana -n open5gs-monitoring -o jsonpath='{.spec.host}')` | N/A |
-| **Kiali** | `https://$(oc get route kiali -n istio-system -o jsonpath='{.spec.host}')` | N/A |
 
 ---
 
